@@ -11,3 +11,4 @@
 - Never commit secrets.
 - Do not add master guest management, dress-code features, or an MVP vendor marketplace.
 - Prefer simple implementations over speculative abstractions.
+-
