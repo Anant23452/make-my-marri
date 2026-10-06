@@ -2,7 +2,7 @@
 
 Make My Marriage is an India-first collaborative wedding-planning web application for couples and families.
 
-**Current stage:** foundation/scaffolding. MVP product features are not implemented yet.
+**Current stage:** scaffold and responsive homepage preview, including a browser-only wedding draft. Shared MVP workspaces and account screens are not implemented yet. See [project progress](./docs/progress.md).
 
 ## Stack
 

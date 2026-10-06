@@ -22,9 +22,27 @@ export function PlanningButton({ className = "button", label = "Start planning y
   }
   return <><button className={className} onClick={open}>{label}<Arrow /></button><dialog ref={dialog} className="planning-dialog" aria-labelledby={`${id}-title`} onClick={(event) => { if (event.target === dialog.current) { const bounds = dialog.current.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.current.close(); } }}><button className="dialog-close" aria-label="Close planning starter" onClick={() => dialog.current?.close()}>×</button><Flower /><p className="eyebrow">YOUR FIRST LITTLE STEP</p><h2 id={`${id}-title`}>{saved ? "A lovely beginning." : "Let’s make it yours."}</h2>{saved ? <div role="status"><p>Your draft for <strong>{draft.title}</strong> is saved in this browser.</p><p className="form-note">An account and shared workspace haven’t been created yet. You can return to this starter on this browser to update your details.</p><button className="button" onClick={() => setSaved(false)}>Edit your draft <Arrow /></button></div> : <><p>Start with a name. The rest can unfold in its own time.</p><form onSubmit={submit}><label htmlFor={`${id}-name`}>Your wedding name <span>Required</span></label><input id={`${id}-name`} name="title" required minLength={2} maxLength={120} placeholder="e.g. Aarav & Nisha’s wedding" value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /><label htmlFor={`${id}-date`}>Wedding date <span>Optional</span></label><input id={`${id}-date`} name="weddingDate" type="date" value={draft.weddingDate} onChange={(event) => setDraft({ ...draft, weddingDate: event.target.value })} /><label htmlFor={`${id}-city`}>City <span>Optional</span></label><input id={`${id}-city`} name="city" maxLength={120} placeholder="Where will you celebrate?" value={draft.city} onChange={(event) => setDraft({ ...draft, city: event.target.value })} /><p className="form-note">Planning preview · This saves a draft only on this browser. Accounts and shared workspaces are coming next.</p>{error && <p className="form-error" role="alert">{error}</p>}<button className="button" type="submit">Save my wedding draft <Arrow /></button></form></>}</dialog></>;
 }
+function SignInButton() {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const id = useId();
+
+  return <>
+    <button type="button" className="sign-in-button" aria-haspopup="dialog" onClick={() => dialog.current?.showModal()}>Sign in</button>
+    <dialog ref={dialog} className="planning-dialog" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`}>
+      <button type="button" className="dialog-close" aria-label="Close sign-in information" onClick={() => dialog.current?.close()}>×</button>
+      <Flower />
+      <p className="eyebrow">YOUR SHARED PLANS</p>
+      <h2 id={`${id}-title`}>Sign-in is coming soon.</h2>
+      <p id={`${id}-description`}>Accounts and shared wedding workspaces are still being built. For now, use “Start your story” to save a wedding draft in this browser.</p>
+      <p className="form-note">Your existing draft stays on this device. No account is needed for the preview.</p>
+      <button type="button" className="button" onClick={() => dialog.current?.close()}>Back to the homepage <Arrow /></button>
+    </dialog>
+  </>;
+}
+
 export function HomeHeader() {
   const [open, setOpen] = useState(false);
-  return <header className="site-header"><div className="header-inner section-width"><Brand /><nav className={open ? "main-nav is-open" : "main-nav"} id="main-nav" aria-label="Main navigation"><a href="#how-it-works" onClick={() => setOpen(false)}>How it works</a><a href="#celebrations" onClick={() => setOpen(false)}>The celebrations</a><a href="#together" onClick={() => setOpen(false)}>Better together</a></nav><PlanningButton className="button header-cta" label="Start your story" /><button className="menu-toggle" aria-label={open ? "Close navigation" : "Open navigation"} aria-expanded={open} aria-controls="main-nav" onClick={() => setOpen(!open)}>{open ? "×" : <><span /><span /></>}</button></div></header>;
+  return <header className="site-header"><div className="header-inner section-width"><Brand /><nav className={open ? "main-nav is-open" : "main-nav"} id="main-nav" aria-label="Main navigation"><a href="#how-it-works" onClick={() => setOpen(false)}>How it works</a><a href="#celebrations" onClick={() => setOpen(false)}>The celebrations</a><a href="#together" onClick={() => setOpen(false)}>Better together</a><SignInButton /></nav><PlanningButton className="button header-cta" label="Start your story" /><button className="menu-toggle" aria-label={open ? "Close navigation" : "Open navigation"} aria-expanded={open} aria-controls="main-nav" onClick={() => setOpen(!open)}>{open ? "×" : <><span /><span /></>}</button></div></header>;
 }
 const ceremonies = [
   { name: "Haldi", mood: "A little sunshine. A lot of laughter.", description: "Keep the flowers, family tasks, venue, and guest list together, so there’s more time for the wonderfully messy bits.", time: "Morning celebration", tasks: ["Confirm the marigold décor", "Share the venue with family", "Prepare the ceremony essentials"], color: "#b19043", symbol: "☀" },

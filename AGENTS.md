@@ -11,4 +11,4 @@
 - Never commit secrets.
 - Do not add master guest management, dress-code features, or an MVP vendor marketplace.
 - Prefer simple implementations over speculative abstractions.
--
+- Update `docs/progress.md` whenever a feature or meaningful fix is added: record completed work, current work, remaining milestones, and validation performed. Keep its progress bar and completed milestone count consistent with the checklist; distinguish previews and scaffolding from working end-to-end features.

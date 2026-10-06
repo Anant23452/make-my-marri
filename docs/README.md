@@ -8,3 +8,5 @@ The approved documents in this directory are the source of truth for Make My Mar
 - [04 — API Documentation](./04_Make_My_Marriage_API_Documentation_v1.md): HTTP contracts, endpoint behavior, permissions, and response conventions.
 
 Use this precedence by concern: product behavior → PRD; architecture → System Design; persistence → Database Design; HTTP interface → API Documentation.
+
+Implementation status and completed work are tracked in [Progress](./progress.md).
