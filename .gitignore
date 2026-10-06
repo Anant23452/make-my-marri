@@ -22,3 +22,4 @@ yarn-error.log*
 # OS/editor files
 .DS_Store
 Thumbs.db
+.mcp.json
