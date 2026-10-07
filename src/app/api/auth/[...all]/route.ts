@@ -7,9 +7,18 @@ async function handlers() {
 }
 
 export async function GET(request: Request) {
-  return (await handlers()).GET(request);
+  return handleRequest(request, "GET");
 }
 
 export async function POST(request: Request) {
-  return (await handlers()).POST(request);
+  return handleRequest(request, "POST");
+}
+
+async function handleRequest(request: Request, method: "GET" | "POST") {
+  try {
+    return await (await handlers())[method](request);
+  } catch {
+    // Do not expose configuration, provider errors, or credentials to the browser.
+    return Response.json({ code: "AUTH_SERVICE_UNAVAILABLE", message: "Authentication is temporarily unavailable." }, { status: 503 });
+  }
 }

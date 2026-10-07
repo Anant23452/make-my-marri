@@ -1,6 +1,6 @@
 # Project progress
 
-Last updated: 6 October 2026
+Last updated: 7 October 2026
 
 Milestone progress: `[##----------]` **2 of 12 complete (17%)**.
 This counts equally weighted milestones, not effort or production readiness.
@@ -9,7 +9,7 @@ This counts equally weighted milestones, not effort or production readiness.
 
 - [x] Project scaffold: Next.js, TypeScript, Tailwind, domain folders, and infrastructure helpers.
 - [x] Responsive homepage preview: imagery, local fonts, ceremony tabs, FAQs, mobile navigation, and browser-only planning draft.
-- [ ] Account flows: sign-in, registration, verification, recovery, and session-aware UI. Better Auth server integration exists; the homepage sign-in button currently explains availability.
+- [ ] Account flows: sign-in, registration, verification, recovery, and session-aware UI. Login and password recovery UI are connected to Better Auth; Registration now persists accounts in MongoDB; verification/resend UI, email configuration, and complete workflow validation remain.
 - [ ] Wedding creation and isolated shared workspaces.
 - [ ] Family invitations, roles, and finance permissions enforced through server workflows.
 - [ ] Events and task planning.
@@ -22,11 +22,20 @@ This counts equally weighted milestones, not effort or production readiness.
 
 ## Current state and next work
 
-Homepage and progress tracking updates are implemented. Account flows are the next unfinished milestone; implementation has not started in this update.
+The Stitch-inspired /login page is implemented and linked from desktop and mobile homepage navigation. It uses real Better Auth email/password requests, session status, sign-out, and password recovery with /reset-password. Account flows remain the next unfinished milestone: verification/resend UI, email-service configuration, abuse protection review, and complete workflow validation are outstanding. Registration is available at /register.
 
 The planning starter saves only to local browser storage. It does not create an account or a shared wedding workspace. Homepage examples are illustrative. Infrastructure helpers do not establish that external services are configured or verified.
 
 ## Completed work log
+
+### Sign-in page — 7 October 2026
+
+- Built /login from the reviewed Stitch Login source: editorial two-column desktop layout, wedding photograph, ivory/forest/gold palette, and the homepage’s local fonts. On mobile the form appears first. Removed unsupported concierge services, statistics, security claims, and Google sign-in.
+- Replaced the homepage’s coming-soon sign-in dialog with /login links, preserving its button styling and mobile navigation.
+- Added a Better Auth browser client, Zod account validation, email/password submission, password visibility toggle, remember-device option, loading/error feedback, session status, and sign-out. Successful sign-in displays an account state; no wedding dashboard is implied.
+- Added reset-link requests and /reset-password with password confirmation, invalid-link handling, and real Better Auth reset submission. Registration is explicitly marked as upcoming rather than linked to a missing page.
+- Validation: npm run typecheck and npm run lint passed. Production build passed after allowing the Next.js worker outside the Windows sandbox. HTTP checks returned 200 for /, /login, and /reset-password; homepage HTML includes /login. git diff --check passed.
+- Browser visual/interaction validation was attempted but the browser tool failed to initialize (missing kernel-assets path). At login implementation time, no .env or .env.local existed; live sign-in/session persistence, Resend reset delivery, and password reset were not tested. MongoDB reachability was subsequently verified below. Public-launch abuse protection and full account flows remain incomplete; milestone count stays 2 of 12.
 
 ### 6 October 2026
 
@@ -36,6 +45,53 @@ The planning starter saves only to local browser storage. It does not create an 
 - Fixed the existing homepage brand link to use Next.js Link, resolving the lint error found during validation.
 - Validation: `npm run lint`, `npm run typecheck`, and `git diff --check` passed. Browser interaction and visual checks were not performed; no browser connection is available in this session. Authentication services were not tested end to end.
 
+### Homepage button styling and sign-in design review — 6 October 2026
+
+- Reused the same `button header-cta` classes for Sign in and Start your story: matching font, responsive font size, forest background, text color, padding, border, and hover treatment. Sign in remains in the mobile menu and retains its preview dialog.
+- Attempted to read the existing Stitch project and screen list; both returned `Authentication required`. No sign-in design could be inspected, and no sign-in page was implemented.
+- Validation: `npm run lint` and `npm run typecheck` passed. Shared button classes and responsive overrides were reviewed in source; browser visual checks were not performed.
+
+### Stitch connection and Login review — 6 October 2026
+
+- Used the repository's `.mcp.json` connection directly, as requested; tool discovery and screen reads succeeded without displaying credentials.
+- Read the HTML for `Make My Marriage — Login` (screen `c3577d2f6d03468791fc373b88e39c6c`). The screen is tagged desktop; its HTML contains responsive rules. No separate mobile Login screen was listed.
+- Screenshot download returned HTTP 500; visual rendering remains unverified.
+- Recommended retaining the two-column desktop layout, putting the form first on mobile, reusing homepage fonts/tokens, simplifying copy, removing unsupported concierge/statistical/security claims, and using actual email/password authentication rather than the source's simulated success. Google sign-in is outside the current email/password baseline.
+- No sign-in page was built. Implementation awaits the user's design discussion.
+
+### MongoDB connection — 7 October 2026
+
+- Configured MONGODB_URI and MONGODB_DB_NAME=make_my_marriage in the ignored .env.local file, using the existing official-driver connection helper. No credentials were added to tracked files.
+- Validation: connected with the installed MongoDB driver and successfully pinged the application database. git check-ignore confirmed .env.local is ignored.
+- This verifies database reachability only. Better Auth secret/base URL and Resend configuration still need setup; account flows and wedding persistence are not complete. Milestone count remains 2 of 12.
+### Authentication configuration fix — 7 October 2026
+
+- Traced login failures to missing BETTER_AUTH_SECRET and BETTER_AUTH_URL. Generated a cryptographically random secret and configured http://localhost:3000 in ignored .env.local, preserving MongoDB settings.
+- Auth route initialization failures now return a safe 503 response and a recognizable error code instead of exposing framework error output. Added client messages for unavailable authentication and invalid origin.
+- Validation: live session endpoint returned 200; a fabricated nonexistent-account login returned 401 INVALID_EMAIL_OR_PASSWORD, confirming the sign-in endpoint initializes and reaches account validation without creating data. TypeScript, lint, and git diff --check passed. No successful-account or email-delivery test was performed.
+- Resend configuration, registration/verification UI, and full account workflow checks remain outstanding; milestone count remains 2 of 12.
+### First-time account registration — 7 October 2026
+
+- Fixed the missing first-time user journey: /login now links to /register, with name, email, password, and confirmation validation. Registration uses Better Auth rather than saving passwords through application code.
+- Verification remains mandatory for sign-in. Automatic signup verification email is sent only when Resend settings exist; without email setup, registration persists an unverified account and clearly explains why sign-in is not yet available. No verification bypass was introduced.
+- Validation: live registration returned 200; queried MongoDB make_my_marriage.user and account to confirm an unverified user and password hash were saved. Removed only the fabricated test user and related account/session records afterward. TypeScript and lint passed. No real-user account was created or changed.
+- Email configuration and verification/resend UX remain unfinished. Account milestone remains incomplete; progress stays 2 of 12.
+### Login testing and recovery fix — 7 October 2026
+
+- Added `scripts/test-auth.mjs`, a repeatable local authentication smoke test that creates a fabricated account and removes its account/session records and matching reset records afterward. It refuses remote hosts and configured email delivery.
+- Passed 25 live checks: page responses, login labels and registration link, anonymous session, malformed email, unknown account, registration, mandatory verification, valid verification token, wrong password, untrusted origin, successful login with both remember-device settings, HttpOnly/SameSite cookie persistence, session identity, sign-out/session revocation, invalid reset token, and unavailable recovery behavior.
+- Found that Better Auth acknowledged password-reset requests while delivery failed in a background task. Reset delivery is now disabled when email configuration is missing, returning `RESET_PASSWORD_DISABLED` with a clear client message. Login validation now trims email before validating it, consistently with registration.
+- Verification used Better Auth's token generator for the fabricated account only; email delivery was not tested and verification requirements were not relaxed. Temporary accounts were removed. A reset token from the initial failed-delivery reproduction may remain until normal expiry; it references the removed test account.
+- TypeScript, lint, and diff whitespace checks passed. Browser initialization failed (`failed to write kernel assets`), so visual layout, keyboard/click interactions, and browser refresh persistence remain unverified. Real verification/reset email delivery, resend UI, and abuse-protection review remain outstanding. Account flows remain incomplete; progress stays 2 of 12.
+
+### Login code review and session recovery hardening — 7 October 2026
+
+- Reviewed the pending login, registration, password recovery, homepage links, and Better Auth integration against the product, architecture, database, and HTTP documentation. The login implementation is suitable for continued development; account flows remain incomplete and are not approved for public launch.
+- Fixed password reset retaining existing sessions by enabling Better Auth's `revokeSessionsOnPasswordReset`. Extended the fabricated-account smoke test to exercise successful reset, session revocation, one-time token use, old-password rejection, and new-password sign-in. Production verification requirements remain unchanged.
+- Validation: all 31 live authentication checks passed and temporary records were removed. Lint, TypeScript, and diff whitespace checks passed. Production build passed after allowing the Next.js validation worker outside the Windows sandbox (the initial sandboxed build hit `spawn EPERM`).
+- Remaining release gaps: configured and tested verification/reset email delivery, verification resend UI, and documented abuse protection (account/IP limits and Turnstile where appropriate). Browser visual and keyboard interaction checks were not performed during this review. Milestone progress stays 2 of 12 (17%). Secrets remain in ignored local configuration.
+
 ## Updating this file
+
 
 Record each meaningful change with its date, outcome, checks performed, and remaining limitations. Check a milestone only when its stated scope is complete, and recalculate the bar/count/percentage together. The PRD and design documents remain authoritative for scope and architecture.

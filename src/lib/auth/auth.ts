@@ -19,17 +19,20 @@ async function createAuth() {
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
-      sendResetPassword: async ({ user, url }) => {
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: process.env.RESEND_API_KEY && process.env.EMAIL_FROM ? async ({ user, url }) => {
         await emailService.send({
           to: user.email,
           subject: "Reset your Make My Marriage password",
           html: `<p>Use the secure link below to reset your password.</p><p><a href="${url}">Reset password</a></p>`,
           text: `Reset your password: ${url}`,
         });
-      },
+      } : undefined,
     },
     emailVerification: {
-      sendOnSignUp: true,
+      // Allow account creation while local email setup is incomplete, but keep
+      // verification mandatory for sign-in. Users can request an email later.
+      sendOnSignUp: Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM),
       sendVerificationEmail: async ({ user, url }) => {
         await emailService.send({
           to: user.email,
