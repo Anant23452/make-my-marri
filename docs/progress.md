@@ -11,7 +11,7 @@ This counts equally weighted milestones, not effort or production readiness.
 - [x] Responsive homepage preview: imagery, local fonts, ceremony tabs, FAQs, mobile navigation, and browser-only planning draft.
 - [ ] Account flows: sign-in, registration, verification, recovery, and session-aware UI. Registration persists accounts in MongoDB; verification/resend and recovery work with the local testing inbox. Real email delivery, abuse protection, and browser workflow validation remain.
 - [ ] Wedding creation and isolated shared workspaces. Creation and membership-filtered saved wedding list work; workspace management and collaboration remain.
-- [ ] Family invitations, roles, and finance permissions enforced through server workflows.
+- [ ] Family invitations, roles, and finance permissions enforced through server workflows. Pages and server workflows implemented; real email delivery and browser interaction validation remain.
 - [ ] Events and task planning.
 - [ ] Budgets, expenses, and manually recorded payments.
 - [ ] Event-specific guests, personalized invitations, and RSVP.
@@ -136,6 +136,20 @@ The planning starter saves only to local browser storage. It does not create an 
 - Added /plan server entry: unauthenticated/unverified users return to login, users with accessible or owned weddings go to /weddings, and new users go to /onboarding. Successful sign-in and the account planning action use /plan.
 - Existing verified owners visiting /onboarding redirect to saved weddings, preventing the repeated wedding-setup screen. Family collaborators with existing access also reach their plans through /plan.
 - Validation: TypeScript, lint, and git diff --check passed. Live routing integration checks were attempted twice but stopped before creating fixtures because MongoDB returned a TLS connection error; new routing assertions remain unverified end to end. Progress count remains 2 of 12; full workspace/account milestones remain incomplete.
+### Family invitations and access — 7 October 2026
+
+- Implemented Family and invitation-acceptance pages using the two supplied Stitch HTML references, with shared fonts/colors, member and pending-invite lists, invitation/permission dialog, resend/revoke controls, and removal confirmation.
+- Added Owner-only email invitations, Editor/Viewer roles, Editor-only finance permission, seven-day expiry, SHA-256 hashed random tokens, same-verified-email acceptance, transactional membership/invite acceptance, revoked/expired/mismatched-account states, and immediate removed-member denial.
+- Added unique membership/token/pending-recipient indexes, wedding-scoped server authorization, write-origin validation, configurable email integration, invite volume limit, and safe provider error responses. Resending rotates the link; failed email attempts revoke the new invitation so a retry can proceed.
+- Added family links to saved weddings. Login/registration preserve a validated family-invitation return path so recipients can return after authenticating. No collaborator ownership claim is created.
+- Configured the user-supplied sender hello@makemymarri.com in ignored .env.local. Resend key has send-only scope, so domain-verification lookup is unavailable. No external test email has been sent; delivery remains unverified.
+- Validation: initial TypeScript check passed after fixing null-flow typing. Lint, TypeScript, production build, and git diff --check passed. Live fixture tests passed for matching-email acceptance/retry, role/finance validation, Owner-only authorization, revocation, member removal, and tenant isolation; temporary accounts, weddings, memberships, and invite records were cleaned up. Repeated tests also passed for duplicate pending invitations and expired links. No external emails were sent during validation. Browser visual review remains unavailable. Family milestone stays incomplete until workflow and delivery are verified; progress remains 2 of 12.
+### Email failure diagnostics — 7 October 2026
+
+- Replaced generic invitation delivery failures with safe categorized messages for unverified sending domain, test-recipient restriction, sender/key permissions, rate limit, and provider connectivity.
+- Server diagnostics contain only category, provider code, and status; email contents, recipient addresses, raw tokens, and API keys are not logged by the new diagnostics.
+- Existing failed attempts logged an empty provider error; their exact rejection reason cannot be recovered. No invitation email was resent for diagnosis. Sender domain verification remains unconfirmed because the API key is send-only.
+- Validation: TypeScript and git diff --check passed. No live delivery was tested. Progress remains 2 of 12.
 ## Updating this file
 
 

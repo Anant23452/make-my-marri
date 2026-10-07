@@ -277,6 +277,7 @@ Create only indexes tied to current screens and invariants. All collections alre
 | `weddingMembers` | unique `{weddingId:1, userId:1}` | Prevent duplicate memberships |
 | `weddingMembers` | unique partial `{weddingId:1, role:1}` where `role=OWNER`, `status=ACTIVE` | At most one active Owner |
 | `memberInvites` | unique `{tokenHash:1}` | Secure link lookup |
+| `memberInvites` | unique partial `{weddingId:1, emailNormalized:1}` where `status=PENDING` | One outstanding invite per recipient; expired invites are revoked before replacement |
 | `memberInvites` | `{weddingId:1, status:1}` | Pending invites |
 | `events` | `{weddingId:1, localDate:1}` | Chronological event list |
 | `tasks` | `{weddingId:1, status:1, dueAt:1}` | Dashboard/pending tasks |

@@ -564,6 +564,8 @@ GET /api/v1/weddings/{weddingId}/members
 
 ## 11.2 Invite member
 
+Invitations expire after seven days. Pending invitations are unique per wedding and normalized recipient email. Delivery failures revoke the newly issued invitation and return a safe service error, allowing a new send attempt. Owner-only `POST /weddings/{weddingId}/member-invites/{inviteId}/resend` rotates a pending link and sends a fresh invitation; the old link becomes invalid. `POST .../{inviteId}/revoke` revokes pending access. Creation is limited to 20 invitation records per wedding per hour.
+
 ```http
 POST /api/v1/weddings/{weddingId}/member-invites
 ```

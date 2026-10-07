@@ -7,7 +7,7 @@ import { authClient } from "@/lib/auth/client";
 import { accountError, loginSchema } from "@/modules/accounts/account.schema";
 import { Arrow } from "@/components/home/home-marks";
 
-export function LoginForm({ emailReady, localEmailPreview = false }: { emailReady: boolean; localEmailPreview?: boolean }) {
+export function LoginForm({ emailReady, localEmailPreview = false, returnTo = "/plan" }: { emailReady: boolean; localEmailPreview?: boolean; returnTo?: string }) {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
   const [pending, setPending] = useState(false);
@@ -40,7 +40,7 @@ export function LoginForm({ emailReady, localEmailPreview = false }: { emailRead
             setError(emailReady ? "Verify your email before signing in. You can request a new link below." : "Your account is awaiting email verification. Email delivery is not configured yet, so no verification link has been sent.");
           } else setError(accountError(result.error.code));
         }
-        else { setNotice("You’re signed in."); await refetch(); router.push("/plan"); }
+        else { setNotice("You’re signed in."); await refetch(); router.push(returnTo); }
       }
     } catch { setError("We couldn’t connect. Check your connection and try again."); }
     finally { setPending(false); }
@@ -50,7 +50,7 @@ export function LoginForm({ emailReady, localEmailPreview = false }: { emailRead
     if (pending || !emailReady || !verificationEmail) return;
     setPending(true); setNotice("");
     try {
-      const result = await authClient.sendVerificationEmail({ email: verificationEmail, callbackURL: "/login" });
+      const result = await authClient.sendVerificationEmail({ email: verificationEmail, callbackURL: `/login?next=${encodeURIComponent(returnTo)}` });
       if (result.error) setError(accountError(result.error.code));
       else { setError(""); setNotice(localEmailPreview ? "If this account needs verification, its link is available in the local testing inbox below." : "If this account needs verification, a new link has been sent. Check your inbox and spam folder."); }
     } catch { setError("We couldn’t send the verification link. Please try again."); }
@@ -70,7 +70,7 @@ export function LoginForm({ emailReady, localEmailPreview = false }: { emailRead
   return <div id="login-form">
     {localEmailPreview && <p className="auth-status">Local testing: verification and reset links appear in the <Link href="/dev/mailbox" target="_blank">testing inbox ↗</Link>.</p>}
     {sessionPending && <p className="auth-status" role="status">Checking your session…</p>}
-    {session ? <div className="auth-signed-in"><p>Signed in as <strong>{session.user.email}</strong>.</p><p>Start your wedding story or return to your saved weddings.</p><Link className="button auth-submit" href="/plan">Go to your plan <Arrow /></Link><Link className="auth-text-button auth-return" href="/weddings">My weddings →</Link><button className="auth-text-button" disabled={pending} onClick={signOut}>{pending ? "Signing out…" : "Sign out"}</button></div> : <form onSubmit={submit} aria-busy={pending}>
+    {session ? <div className="auth-signed-in"><p>Signed in as <strong>{session.user.email}</strong>.</p><p>Start your wedding story or return to your saved weddings.</p><Link className="button auth-submit" href={returnTo}>{returnTo.startsWith("/family-invite/") ? "Return to invitation" : "Go to your plan"} <Arrow /></Link><Link className="auth-text-button auth-return" href="/weddings">My weddings →</Link><button className="auth-text-button" disabled={pending} onClick={signOut}>{pending ? "Signing out…" : "Sign out"}</button></div> : <form onSubmit={submit} aria-busy={pending}>
       {recovery && <p className="auth-recovery-copy">Enter your account email and we’ll send you a link to reset your password.</p>}
       <fieldset disabled={pending || sessionPending}>
         <label htmlFor="login-email">Email address</label><input id="login-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required maxLength={254} />
@@ -83,6 +83,6 @@ export function LoginForm({ emailReady, localEmailPreview = false }: { emailRead
       </fieldset>
     </form>}
     {session && error && <p className="auth-error" role="alert">{error}</p>}
-    <div className="auth-onboarding"><p>New to Make My Marriage?</p><p><Link href="/register">Create an account →</Link></p></div>
+    <div className="auth-onboarding"><p>New to Make My Marriage?</p><p><Link href={`/register?next=${encodeURIComponent(returnTo)}`}>Create an account →</Link></p></div>
   </div>;
 }
