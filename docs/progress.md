@@ -123,6 +123,19 @@ The planning starter saves only to local browser storage. It does not create an 
 - Validation: wedding integration checks (including creation without optional names) and all 45 authentication smoke checks passed; newly fabricated records were removed. Email-preview guards passed, including production read/write denial. TypeScript, lint, diff whitespace checks, and the final production build passed; Next.js workers ran outside the Windows sandbox.
 - Remaining: browser visual/keyboard checks, real email delivery, public-launch abuse protection, full workspace management, and automatic draft transfer. No additional milestone was marked complete; progress remains 2 of 12 (17%).
 
+### One wedding per owner — 7 October 2026
+
+- Applied the revised product rule: a user can create/own one wedding, including archived records; invited membership in other weddings remains permitted.
+- Added a unique user-keyed weddingOwnership claim within the existing wedding + Owner transaction and checks for legacy ownership. Second/retried creation returns 409; simultaneous requests cannot create duplicate owned weddings.
+- Onboarding displays the existing-wedding action for owners, and My weddings hides creation once a wedding is owned. Previously created duplicates are preserved; no user data was deleted or merged.
+- Updated PRD, architecture, persistence, and API contracts for this user-requested change.
+- Validation: live integration checks passed for sequential second-create rejection and concurrent creation (exactly one 201 and one 409), plus existing auth, validation, and tenant-isolation checks. Fabricated test records and ownership claims were cleaned up. TypeScript, lint, and git diff --check passed. Milestone count remains 2 of 12.
+### Session-aware planning navigation — 7 October 2026
+
+- Homepage account entry now shows Your account for signed-in users; all homepage planning CTAs show Go to your plan and no longer open a browser-only draft for authenticated users. Session loading avoids showing an incorrect signed-out action.
+- Added /plan server entry: unauthenticated/unverified users return to login, users with accessible or owned weddings go to /weddings, and new users go to /onboarding. Successful sign-in and the account planning action use /plan.
+- Existing verified owners visiting /onboarding redirect to saved weddings, preventing the repeated wedding-setup screen. Family collaborators with existing access also reach their plans through /plan.
+- Validation: TypeScript, lint, and git diff --check passed. Live routing integration checks were attempted twice but stopped before creating fixtures because MongoDB returned a TLS connection error; new routing assertions remain unverified end to end. Progress count remains 2 of 12; full workspace/account milestones remain incomplete.
 ## Updating this file
 
 

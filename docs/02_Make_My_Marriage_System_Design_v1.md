@@ -24,6 +24,7 @@ date: "4 October 2026"
 The system must:
 
 1. Support multiple isolated wedding workspaces.
+   Each user can create/own only one wedding, while family invitation membership can span other weddings. A unique ownership claim in the wedding-creation transaction enforces this rule under concurrency (7 October 2026 revision).
 2. Keep the first implementation inexpensive and operationally simple.
 3. Use one deployable application.
 4. Enforce authorization server-side.

@@ -152,6 +152,7 @@ Optional:
 Rules:
 - Creator becomes Owner.
 - A user may belong to multiple weddings.
+- A user may create/own only one wedding, including an archived wedding. Membership through family invitations may span other weddings. This ownership limit was revised on 7 October 2026.
 - Weddings remain isolated from one another.
 
 ## FR-03 Dashboard

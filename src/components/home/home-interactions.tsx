@@ -1,10 +1,12 @@
 "use client";
 import Link from "next/link";
+import { authClient } from "@/lib/auth/client";
 import { useId, useRef, useState, type FormEvent } from "react";
 import { Arrow, Brand, Flower } from "./home-marks";
 import { planningDraftSchema, readPlanningDraft, savePlanningDraft } from "@/modules/weddings/planning-draft";
 
 export function PlanningButton({ className = "button", label = "Start planning your wedding" }: { className?: string; label?: string }) {
+  const { data: session, isPending } = authClient.useSession();
   const dialog = useRef<HTMLDialogElement>(null);
   const id = useId();
   const [draft, setDraft] = useState({ title: "", weddingDate: "", city: "" });
@@ -21,10 +23,14 @@ export function PlanningButton({ className = "button", label = "Start planning y
     try { setDraft(savePlanningDraft(parsed.data)); setSaved(true); setError(""); }
     catch { setError("Your browser couldn’t save the draft. Please allow site storage and try again."); }
   }
+  if (isPending) return <button className={className} disabled aria-busy="true">Loading…</button>;
+  if (session) return <Link className={className} href="/plan">Go to your plan<Arrow /></Link>;
   return <><button className={className} onClick={open}>{label}<Arrow /></button><dialog ref={dialog} className="planning-dialog" aria-labelledby={`${id}-title`} onClick={(event) => { if (event.target === dialog.current) { const bounds = dialog.current.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.current.close(); } }}><button className="dialog-close" aria-label="Close planning starter" onClick={() => dialog.current?.close()}>×</button><Flower /><p className="eyebrow">YOUR FIRST LITTLE STEP</p><h2 id={`${id}-title`}>{saved ? "A lovely beginning." : "Let’s make it yours."}</h2>{saved ? <div role="status"><p>Your draft for <strong>{draft.title}</strong> is saved in this browser.</p><p className="form-note">This draft is stored only in this browser. Continue to wedding setup to enter and save your details in your account.</p><button className="button" onClick={() => setSaved(false)}>Edit your draft <Arrow /></button><Link className="button" href="/onboarding">Continue to wedding setup <Arrow /></Link></div> : <><p>Start with a name. The rest can unfold in its own time.</p><form onSubmit={submit}><label htmlFor={`${id}-name`}>Your wedding name <span>Required</span></label><input id={`${id}-name`} name="title" required minLength={2} maxLength={120} placeholder="e.g. Aarav & Nisha’s wedding" value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /><label htmlFor={`${id}-date`}>Wedding date <span>Optional</span></label><input id={`${id}-date`} name="weddingDate" type="date" value={draft.weddingDate} onChange={(event) => setDraft({ ...draft, weddingDate: event.target.value })} /><label htmlFor={`${id}-city`}>City <span>Optional</span></label><input id={`${id}-city`} name="city" maxLength={120} placeholder="Where will you celebrate?" value={draft.city} onChange={(event) => setDraft({ ...draft, city: event.target.value })} /><p className="form-note">Planning preview · This saves a draft only in this browser. To create a wedding in your account, continue to wedding setup after saving.</p>{error && <p className="form-error" role="alert">{error}</p>}<button className="button" type="submit">Save my wedding draft <Arrow /></button></form></>}</dialog></>;
 }
 function SignInButton() {
-  return <Link className="button header-cta sign-in-button" href="/login">Sign in</Link>;
+  const { data: session, isPending } = authClient.useSession();
+  if (isPending) return null;
+  return <Link className="button header-cta sign-in-button" href="/login">{session ? "Your account" : "Sign in"}</Link>;
 }
 
 export function HomeHeader() {

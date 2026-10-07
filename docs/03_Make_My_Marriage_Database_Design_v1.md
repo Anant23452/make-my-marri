@@ -64,7 +64,9 @@ date: "4 October 2026"
 | `vendorRecords` | Wedding, optional event | Manually saved vendor details |
 | `mediaAssets` | Wedding, optional event | R2 media metadata and setup references |
 
-There are **11 application-owned collections**. Better Auth collection names and fields should be generated/maintained by the installed adapter and verified against its pinned package version rather than hand-modified.
+There are **12 application-owned collections**, including `weddingOwnership` added on 7 October 2026. Better Auth collection names and fields should be generated/maintained by the installed adapter and verified against its pinned package version rather than hand-modified.
+
+`weddingOwnership` stores `_id: string` (the exact authenticated user ID), `weddingId: ObjectId`, and `createdAt: Date`. The unique primary key is inserted in the same transaction as wedding and Owner membership, so concurrent creation cannot produce two weddings for an owner. Before insertion, existing wedding ownership is checked inside that transaction. Historical duplicate weddings are retained and block further creation; they are not deleted or merged automatically. Archived weddings still count toward the ownership limit. Family membership in other weddings remains allowed.
 
 # 5. Detailed collection definitions
 

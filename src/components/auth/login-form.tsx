@@ -40,7 +40,7 @@ export function LoginForm({ emailReady, localEmailPreview = false }: { emailRead
             setError(emailReady ? "Verify your email before signing in. You can request a new link below." : "Your account is awaiting email verification. Email delivery is not configured yet, so no verification link has been sent.");
           } else setError(accountError(result.error.code));
         }
-        else { setNotice("You’re signed in."); await refetch(); router.push("/onboarding"); }
+        else { setNotice("You’re signed in."); await refetch(); router.push("/plan"); }
       }
     } catch { setError("We couldn’t connect. Check your connection and try again."); }
     finally { setPending(false); }
@@ -70,7 +70,7 @@ export function LoginForm({ emailReady, localEmailPreview = false }: { emailRead
   return <div id="login-form">
     {localEmailPreview && <p className="auth-status">Local testing: verification and reset links appear in the <Link href="/dev/mailbox" target="_blank">testing inbox ↗</Link>.</p>}
     {sessionPending && <p className="auth-status" role="status">Checking your session…</p>}
-    {session ? <div className="auth-signed-in"><p>Signed in as <strong>{session.user.email}</strong>.</p><p>Start your wedding story or return to your saved weddings.</p><Link className="button auth-submit" href="/onboarding">Begin your wedding story <Arrow /></Link><Link className="auth-text-button auth-return" href="/weddings">My weddings →</Link><button className="auth-text-button" disabled={pending} onClick={signOut}>{pending ? "Signing out…" : "Sign out"}</button></div> : <form onSubmit={submit} aria-busy={pending}>
+    {session ? <div className="auth-signed-in"><p>Signed in as <strong>{session.user.email}</strong>.</p><p>Start your wedding story or return to your saved weddings.</p><Link className="button auth-submit" href="/plan">Go to your plan <Arrow /></Link><Link className="auth-text-button auth-return" href="/weddings">My weddings →</Link><button className="auth-text-button" disabled={pending} onClick={signOut}>{pending ? "Signing out…" : "Sign out"}</button></div> : <form onSubmit={submit} aria-busy={pending}>
       {recovery && <p className="auth-recovery-copy">Enter your account email and we’ll send you a link to reset your password.</p>}
       <fieldset disabled={pending || sessionPending}>
         <label htmlFor="login-email">Email address</label><input id="login-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required maxLength={254} />

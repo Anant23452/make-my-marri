@@ -3,6 +3,7 @@ import { getAuth } from "@/lib/auth/auth";
 import { getAuthEnv } from "@/lib/validation/env";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { weddingService } from "@/modules/weddings/wedding.service";
+import { WeddingAlreadyOwnedError } from "@/modules/weddings/wedding.repository";
 
 async function handle(request: Request, create: boolean) {
   try {
@@ -15,6 +16,7 @@ async function handle(request: Request, create: boolean) {
     try { input = await request.json(); } catch { return apiError("VALIDATION_ERROR", "Provide a valid JSON request.", 400); }
     return apiSuccess(await weddingService.create(session.user.id, input), { status: 201 });
   } catch (error) {
+    if (error instanceof WeddingAlreadyOwnedError) return apiError("CONFLICT", "You already own a wedding. Open My weddings to continue planning it.", 409);
     if (error instanceof z.ZodError) return apiError("VALIDATION_ERROR", error.issues[0].message, 422);
     return apiError("INTERNAL_ERROR", "We couldn’t load or save your wedding. Please try again.", 503);
   }

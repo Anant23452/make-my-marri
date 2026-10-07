@@ -35,6 +35,9 @@ try {
   assert.equal((await request("/api/v1/weddings")).response.status, 401);
   const owner = await fixture();
   const stranger = await fixture();
+  const newUserPlan = await fetch(base + "/plan", { headers: { Cookie: owner.cookie }, redirect: "manual" });
+  assert.equal(newUserPlan.status, 307);
+  assert.equal(newUserPlan.headers.get("location"), "/onboarding");
   const forgedOrigin = await fetch(base + "/api/v1/weddings", {
     method: "POST", headers: { Origin: "https://untrusted.example", Cookie: owner.cookie, "Content-Type": "application/json" },
     body: JSON.stringify({ title: "Forbidden wedding", weddingDate: "2027-02-15" }),
@@ -48,6 +51,12 @@ try {
   assert.equal(invalid.response.status, 422);
   const created = await request("/api/v1/weddings", "POST", { title: "Integration wedding", brideName: "Test Bride", groomName: "Test Groom", weddingDate: "2027-02-15", city: "Lucknow" }, owner.cookie);
   assert.equal(created.response.status, 201);
+  for (const path of ["/plan", "/onboarding"]) {
+    const returningUser = await fetch(base + path, { headers: { Cookie: owner.cookie }, redirect: "manual" });
+    assert.equal(returningUser.status, 307);
+    assert.equal(returningUser.headers.get("location"), "/weddings");
+  }
+  console.log("PASS: new users reach onboarding; returning owners reach saved plans.");
   const wedding = await db.collection("weddings").findOne({ ownerUserId: owner.user._id.toString() });
   assert.ok(wedding);
   assert.equal(wedding.brideName, "Test Bride");
@@ -61,7 +70,11 @@ try {
   const otherList = await request("/api/v1/weddings", "GET", undefined, stranger.cookie);
   assert.ok(!otherList.payload.data.some(item => item.id === created.payload.data.id));
   const minimal = await request("/api/v1/weddings", "POST", { title: "Title and date only", weddingDate: "2027-02-15" }, owner.cookie);
-  assert.equal(minimal.response.status, 201);
+  assert.equal(minimal.response.status, 409);
+  const concurrent = await Promise.all([1, 2].map(number => request("/api/v1/weddings", "POST", { title: `Concurrent wedding ${number}`, weddingDate: "2027-02-15" }, stranger.cookie)));
+  assert.deepEqual(concurrent.map(result => result.response.status).sort(), [201, 409]);
+  assert.equal(await db.collection("weddings").countDocuments({ ownerUserId: stranger.user._id.toString() }), 1);
+  console.log("PASS: second wedding blocked; concurrent creation allows exactly one wedding per owner.");
   console.log("PASS: unauthenticated/unverified denial, origin and forged-identity rejection, date validation, transactional creation, names/timezone persisted, Owner membership, account isolation, and creation without optional names.");
 } finally {
   // Delete only records belonging to these explicitly fabricated test accounts.
@@ -73,6 +86,7 @@ try {
       await db.collection("weddings").deleteOne({ _id: wedding._id, ownerUserId: userId });
     }
     const references = [user._id, userId];
+    await db.collection("weddingOwnership").deleteOne({ _id: userId });
     await db.collection("session").deleteMany({ userId: { $in: references } });
     await db.collection("account").deleteMany({ userId: { $in: references } });
     await db.collection("verification").deleteMany({ value: { $in: references }, identifier: /^reset-password:/ });
