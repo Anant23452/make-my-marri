@@ -5,6 +5,7 @@ import { mongodbAdapter } from "better-auth/adapters/mongodb";
 
 import { getMongoClient, getDatabase } from "@/lib/db/mongodb";
 import { emailService } from "@/lib/email";
+import { isEmailDeliveryReady } from "@/lib/email/delivery";
 import { getAuthEnv } from "@/lib/validation/env";
 
 async function createAuth() {
@@ -20,7 +21,7 @@ async function createAuth() {
       enabled: true,
       requireEmailVerification: true,
       revokeSessionsOnPasswordReset: true,
-      sendResetPassword: process.env.RESEND_API_KEY && process.env.EMAIL_FROM ? async ({ user, url }) => {
+      sendResetPassword: isEmailDeliveryReady() ? async ({ user, url }) => {
         await emailService.send({
           to: user.email,
           subject: "Reset your Make My Marriage password",
@@ -30,9 +31,7 @@ async function createAuth() {
       } : undefined,
     },
     emailVerification: {
-      // Allow account creation while local email setup is incomplete, but keep
-      // verification mandatory for sign-in. Users can request an email later.
-      sendOnSignUp: Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM),
+      sendOnSignUp: isEmailDeliveryReady(),
       sendVerificationEmail: async ({ user, url }) => {
         await emailService.send({
           to: user.email,

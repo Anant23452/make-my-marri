@@ -9,8 +9,8 @@ This counts equally weighted milestones, not effort or production readiness.
 
 - [x] Project scaffold: Next.js, TypeScript, Tailwind, domain folders, and infrastructure helpers.
 - [x] Responsive homepage preview: imagery, local fonts, ceremony tabs, FAQs, mobile navigation, and browser-only planning draft.
-- [ ] Account flows: sign-in, registration, verification, recovery, and session-aware UI. Login and password recovery UI are connected to Better Auth; Registration now persists accounts in MongoDB; verification/resend UI, email configuration, and complete workflow validation remain.
-- [ ] Wedding creation and isolated shared workspaces.
+- [ ] Account flows: sign-in, registration, verification, recovery, and session-aware UI. Registration persists accounts in MongoDB; verification/resend and recovery work with the local testing inbox. Real email delivery, abuse protection, and browser workflow validation remain.
+- [ ] Wedding creation and isolated shared workspaces. Creation and membership-filtered saved wedding list work; workspace management and collaboration remain.
 - [ ] Family invitations, roles, and finance permissions enforced through server workflows.
 - [ ] Events and task planning.
 - [ ] Budgets, expenses, and manually recorded payments.
@@ -22,7 +22,9 @@ This counts equally weighted milestones, not effort or production readiness.
 
 ## Current state and next work
 
-The Stitch-inspired /login page is implemented and linked from desktop and mobile homepage navigation. It uses real Better Auth email/password requests, session status, sign-out, and password recovery with /reset-password. Account flows remain the next unfinished milestone: verification/resend UI, email-service configuration, abuse protection review, and complete workflow validation are outstanding. Registration is available at /register.
+Wedding onboarding is implemented at /onboarding using the supplied Stitch HTML as reference. Verified accounts can create a wedding and Owner membership transactionally, then reopen saved details at /weddings. The wedding milestone remains incomplete: workspace settings, archive/edit flows, and shared planning modules are not implemented.
+
+The Stitch-inspired /login page is implemented and linked from desktop and mobile homepage navigation. It uses real Better Auth email/password requests, session status, sign-out, verification resend, and password recovery with /reset-password. Registration is available at /register. Verification and recovery links work through the development-only testing inbox; real email delivery, abuse protection, and browser workflow validation remain outstanding.
 
 The planning starter saves only to local browser storage. It does not create an account or a shared wedding workspace. Homepage examples are illustrative. Infrastructure helpers do not establish that external services are configured or verified.
 
@@ -90,6 +92,36 @@ The planning starter saves only to local browser storage. It does not create an 
 - Fixed password reset retaining existing sessions by enabling Better Auth's `revokeSessionsOnPasswordReset`. Extended the fabricated-account smoke test to exercise successful reset, session revocation, one-time token use, old-password rejection, and new-password sign-in. Production verification requirements remain unchanged.
 - Validation: all 31 live authentication checks passed and temporary records were removed. Lint, TypeScript, and diff whitespace checks passed. Production build passed after allowing the Next.js validation worker outside the Windows sandbox (the initial sandboxed build hit `spawn EPERM`).
 - Remaining release gaps: configured and tested verification/reset email delivery, verification resend UI, and documented abuse protection (account/IP limits and Turnstile where appropriate). Browser visual and keyboard interaction checks were not performed during this review. Milestone progress stays 2 of 12 (17%). Secrets remain in ignored local configuration.
+
+### Wedding onboarding — 7 October 2026
+
+- Adapted the supplied Stitch desktop HTML to the existing local fonts and ivory/forest/gold tokens, with form-first mobile layout and existing local wedding photography. Removed unsupported four-step navigation, tone pills, autosaved state, instant-feature promises, and simulated success.
+- Added bride/groom names, editable suggested title, required date, optional city, validation, loading/error states, verified-session gating, and database-backed success. Name changes preserve a manually edited title until explicitly reset.
+- Added POST/GET /api/v1/weddings with Zod validation, authenticated verified-user checks, write-origin validation, services/repositories, transactional wedding + Owner creation, and membership-scoped reads. Added /weddings saved-details list and account links into onboarding.
+- Documented optional brideName/groomName persistence/API fields. Finance fields and full workspace management remain deferred. No marketplace, master guests, or dress-code features were added.
+- Validation: TypeScript and lint passed. Live integration test verified unauthenticated denial, invalid-date rejection, transactional persistence, saved names, Owner finance permission, and isolation from another account. Only fabricated test accounts/weddings were used and cleaned up. Browser visual verification remains unavailable. Production build passed; /onboarding returned 200 and unauthenticated /weddings redirected to /login. Successful sign-in now opens onboarding.
+- Progress remains 2 of 12 because creation/list is a working slice, not the full shared workspace milestone.
+### Verification guidance and resend — 7 October 2026
+
+- Confirmed email delivery is not configured, while verification is required. Corrected login guidance so it does not tell users a link was sent when the service is unavailable.
+- Added verification resend action with Better Auth for configured email delivery, and prevented reset requests from falsely reporting email delivery while unconfigured. Login derives email-service availability server-side without exposing credentials.
+- Validation: TypeScript and lint passed. Email delivery cannot be tested without Resend configuration; verification remains required and no user verification flags were changed. Full account milestone remains incomplete.
+### Local verification and recovery testing inbox — 7 October 2026
+
+- Fixed the local signup dead end caused by mandatory verification with no email provider. In development with a loopback HTTP auth URL and no Resend key, authentication emails now go to an in-memory testing inbox at `/dev/mailbox`. Production continues to use Resend and require verified email; verification flags are never bypassed.
+- Login and registration link to the testing inbox and explain local delivery. Existing unverified accounts can request a verification link from login, open it in the inbox, then sign in. The inbox clears on server restart, retains at most 20 messages, and rejects nonlocal Host headers. Real email delivery remains unconfigured.
+- Extended authentication testing to follow actual preview-delivered verification and reset links instead of generating/seeding test tokens. All 45 checks passed, including invalid/blank credentials, length limits, password mismatch, local inbox host restriction, verification, both remember-device options, logout/re-login, reset-token reuse rejection, old-password denial, and session revocation. A separate test confirms preview read/write are disabled in production and for public auth URLs/configured providers.
+- TypeScript, lint, and diff checks passed. One verified fabricated account was intentionally retained using `--keep-demo` for the user's manual browser testing; other test records were cleaned up. No real-user account was modified.
+- Requested the login browser panel, but it returned `queued`. Both browser automation runtimes failed with `failed to write kernel assets`; watched browser interaction, layout, keyboard, and device checks remain blocked. Account milestone remains incomplete and progress stays 2 of 12.
+
+### Registration and wedding onboarding code review — 7 October 2026
+
+- Reviewed registration, the browser-only homepage starter, wedding onboarding, authentication/email changes, and transactional wedding persistence. Added a next-step link from the saved homepage draft to `/onboarding` and corrected outdated account availability copy; drafts remain local and details must be entered in wedding setup.
+- Fixed the onboarding skip link so its focusable target exists during loading, signed-out, unverified, form, and saved states. Kept all wedding access checks on the server and the wedding/Owner writes in one transaction.
+- Aligned the onboarding form with PRD FR-02: bride/groom names are optional, while title and date remain required. Empty names are omitted from the request rather than failing optional-field validation; supplied names still use length/trim validation.
+- Fixed wedding integration-test cleanup to match both string and ObjectId authentication references, assert account/session removal, and refuse configured external email delivery. Extended checks for unverified sign-in, untrusted write origins, forged ownership, and the default timezone.
+- Validation: wedding integration checks (including creation without optional names) and all 45 authentication smoke checks passed; newly fabricated records were removed. Email-preview guards passed, including production read/write denial. TypeScript, lint, diff whitespace checks, and the final production build passed; Next.js workers ran outside the Windows sandbox.
+- Remaining: browser visual/keyboard checks, real email delivery, public-launch abuse protection, full workspace management, and automatic draft transfer. No additional milestone was marked complete; progress remains 2 of 12 (17%).
 
 ## Updating this file
 

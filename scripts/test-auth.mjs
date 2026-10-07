@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
+import { request as httpRequest } from "node:http";
 import { MongoClient } from "mongodb";
-import { createEmailVerificationToken } from "better-auth/api";
+import { loginSchema, registrationSchema, resetPasswordSchema } from "../src/modules/accounts/account.schema.ts";
 
 const require = createRequire(import.meta.url);
 require("@next/env").loadEnvConfig(process.cwd());
@@ -16,6 +17,8 @@ const password = `Test-${randomUUID()}!`;
 const client = new MongoClient(process.env.MONGODB_URI);
 let userId;
 let passed = 0;
+let completed = false;
+const keepDemo = process.argv.includes("--keep-demo");
 const check = (label, condition) => {
   assert.ok(condition, label);
   passed++;
@@ -34,7 +37,25 @@ async function request(path, body, cookie, origin = base) {
 function cookies(response) {
   return response.headers.getSetCookie().map(value => value.split(";")[0]).join("; ");
 }
+async function inboxLink(route) {
+  const response = await fetch(`${base}/dev/mailbox`);
+  const html = await response.text();
+  check("Local testing inbox available", response.status === 200);
+  const links = [...html.matchAll(/href="([^"]+)"/g)].map(match => match[1].replaceAll("&amp;", "&"));
+  const link = links.find(value => value.startsWith(`${base}/api/auth/${route}`));
+  assert.ok(link, `Inbox contains ${route} link`);
+  return link;
+}
 try {
+  check("Blank email rejected", !loginSchema.safeParse({ email: "", password, rememberMe: false }).success);
+  check("Blank password rejected", !loginSchema.safeParse({ email, password: "", rememberMe: false }).success);
+  check("Email whitespace normalized", loginSchema.parse({ email: ` ${email} `, password, rememberMe: false }).email === email);
+  const registration = { name: "Test Account", email, password, confirmation: password };
+  check("Short registration password rejected", !registrationSchema.safeParse({ ...registration, password: "short", confirmation: "short" }).success);
+  check("Long registration password rejected", !registrationSchema.safeParse({ ...registration, password: "x".repeat(129), confirmation: "x".repeat(129) }).success);
+  check("Mismatched registration passwords rejected", !registrationSchema.safeParse({ ...registration, confirmation: "different" }).success);
+  check("Blank name rejected", !registrationSchema.safeParse({ ...registration, name: "  " }).success);
+  check("Mismatched reset passwords rejected", !resetPasswordSchema.safeParse({ password, confirmation: "different" }).success);
   await client.connect();
   for (const path of ["/", "/login", "/register", "/reset-password"]) {
     const response = await fetch(`${base}${path}`);
@@ -44,6 +65,19 @@ try {
   }
   let result = await request("/api/auth/get-session");
   check("Anonymous session is empty", result.response.status === 200 && result.data === null);
+  result = await request("/api/auth/sign-in/email", { email });
+  check("Server rejects missing password", result.response.status === 400);
+  result = await request("/api/auth/sign-up/email", { name: "Test Account", email, password: "short" });
+  check("Server rejects short registration password", result.response.status === 400);
+  const remoteInbox = await new Promise((resolve, reject) => {
+    const req = httpRequest(`${base}/dev/mailbox`, { headers: { Host: "untrusted.example" } }, response => {
+      let html = "";
+      response.on("data", chunk => { html += chunk; });
+      response.on("end", () => resolve({ status: response.statusCode, html }));
+    });
+    req.on("error", reject); req.end();
+  });
+  check("Testing inbox rejects nonlocal Host", !remoteInbox.html.includes("<h1>Local testing inbox</h1>") && (remoteInbox.status === 404 || remoteInbox.html.includes("NEXT_HTTP_ERROR_FALLBACK;404")));
   result = await request("/api/auth/sign-in/email", { email: "bad-email", password });
   check("Malformed email rejected", result.response.status === 400);
   result = await request("/api/auth/sign-in/email", { email, password });
@@ -53,10 +87,8 @@ try {
   check("Registration creates an unverified account", result.response.status === 200 && userId && result.data.user.emailVerified === false);
   result = await request("/api/auth/sign-in/email", { email, password });
   check("Unverified account cannot sign in", result.response.status === 403 && result.data.code === "EMAIL_NOT_VERIFIED");
-  // Use the installed library's token generator only for this fabricated account.
-  // This exercises verification without changing application verification policy.
-  const token = await createEmailVerificationToken(process.env.BETTER_AUTH_SECRET, email);
-  result = await request(`/api/auth/verify-email?token=${encodeURIComponent(token)}&callbackURL=${encodeURIComponent(`${base}/login`)}`);
+  const verificationLink = await inboxLink("verify-email");
+  result = await request(verificationLink.slice(base.length));
   check("Valid verification token accepted", [200, 302].includes(result.response.status));
   result = await request("/api/auth/sign-in/email", { email, password: "Wrong-password-123!" });
   check("Wrong password rejected", result.response.status === 401 && result.data.code === "INVALID_EMAIL_OR_PASSWORD");
@@ -78,16 +110,14 @@ try {
   result = await request("/api/auth/reset-password", { token: "invalid-test-token", newPassword: password });
   check("Invalid reset token rejected", result.response.status === 400 && result.data.code === "INVALID_TOKEN");
   result = await request("/api/auth/request-password-reset", { email, redirectTo: "/reset-password" });
-  check("Missing email configuration disables recovery clearly", result.response.status === 400 && result.data.code === "RESET_PASSWORD_DISABLED");
+  check("Local password recovery request succeeds", result.response.status === 200);
   result = await request("/api/auth/sign-in/email", { email, password, rememberMe: true });
   const priorCookie = cookies(result.response);
   check("Session exists before password reset", (await request("/api/auth/get-session", undefined, priorCookie)).data?.user?.id === userId);
-  // Seed only the fabricated account's token to test reset semantics without email.
-  const resetToken = randomUUID();
-  await client.db(process.env.MONGODB_DB_NAME || "make_my_marriage").collection("verification").insertOne({
-    identifier: `reset-password:${resetToken}`, value: userId,
-    expiresAt: new Date(Date.now() + 60_000), createdAt: new Date(), updatedAt: new Date(),
-  });
+  const resetLink = await inboxLink("reset-password/");
+  const resetRedirect = await request(resetLink.slice(base.length));
+  const resetToken = new URL(resetRedirect.response.headers.get("location"), base).searchParams.get("token");
+  check("Delivered reset link redirects with token", Boolean(resetToken));
   const newPassword = `Reset-${randomUUID()}!`;
   result = await request("/api/auth/reset-password", { token: resetToken, newPassword });
   check("Valid password reset succeeds", result.response.status === 200);
@@ -98,11 +128,13 @@ try {
   check("Old password no longer works", result.response.status === 401);
   result = await request("/api/auth/sign-in/email", { email, password: newPassword });
   check("New password signs in", result.response.status === 200);
-  console.log(`${passed} checks passed. Email delivery and browser interactions were not tested.`);
+  completed = true;
+  console.log(`${passed} checks passed. Local email preview tested; external delivery and browser interactions were not tested.`);
+  if (keepDemo) console.log(`Local dummy account retained for manual browser testing:\nEmail: ${email}\nPassword: ${newPassword}`);
 } finally {
   const db = client.db(process.env.MONGODB_DB_NAME || "make_my_marriage");
   const user = await db.collection("user").findOne({ email });
-  if (user) {
+  if (user && !(keepDemo && completed)) {
     const references = [userId, user._id, String(user._id)].filter(Boolean);
     await db.collection("session").deleteMany({ userId: { $in: references } });
     await db.collection("account").deleteMany({ userId: { $in: references } });

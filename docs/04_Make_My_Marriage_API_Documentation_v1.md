@@ -407,6 +407,8 @@ Returns weddings where the caller has an active membership.
 
 ## 10.2 Create wedding
 
+Onboarding may additionally send optional `brideName` and `groomName` (trimmed, 2–120 characters each). These are stored on the wedding; an editable title remains required. The current onboarding slice accepts title, names, date, city, and Asia/Kolkata timezone. Budget input is deferred to the finance milestone.
+
 ```http
 POST /api/v1/weddings
 ```

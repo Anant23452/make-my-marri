@@ -76,6 +76,7 @@ A field labeled **R** is required; **O** is optional. Every application collecti
 |---|---|---|
 | `_id` | ObjectId | R; primary key |
 | `title` | String | R; trimmed, 2–120 characters |
+| `brideName`, `groomName` | String | O; trimmed, 2–120 characters each; collected by wedding onboarding |
 | `ownerUserId` | String | R; immutable Better Auth ID unless a future ownership-transfer workflow is designed |
 | `weddingDate` | String | R; valid `YYYY-MM-DD`, used for initial countdown |
 | `timezone` | String | R; MVP default `Asia/Kolkata` |

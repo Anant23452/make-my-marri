@@ -3,6 +3,7 @@ import "server-only";
 import { Resend } from "resend";
 
 import { getEmailEnv } from "@/lib/validation/env";
+import { isLocalEmailPreview, savePreviewEmail } from "./delivery";
 
 export type TransactionalEmail = {
   to: string | string[];
@@ -17,6 +18,12 @@ export interface EmailService {
 
 class ResendEmailService implements EmailService {
   async send(message: TransactionalEmail): Promise<void> {
+    if (isLocalEmailPreview()) {
+      for (const to of Array.isArray(message.to) ? message.to : [message.to]) {
+        savePreviewEmail({ to, subject: message.subject, text: message.text ?? "" });
+      }
+      return;
+    }
     const { EMAIL_FROM, RESEND_API_KEY } = getEmailEnv();
     const resend = new Resend(RESEND_API_KEY);
     const { error } = await resend.emails.send({
