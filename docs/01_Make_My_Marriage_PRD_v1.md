@@ -193,6 +193,10 @@ Each event can contain:
 
 ## FR-05 Family Collaboration
 
+Member privacy revision (7 October 2026): only the Owner can see the full registered-member list, member count, and pending invitations. Editors and Viewers see their own role and capabilities only.
+
+On invitation acceptance, the recipient identifies their relationship to the couple (such as groom’s father, bride’s mother, sibling, relative, friend, or another description). Relationship is wedding-specific profile information, separate from Owner/Editor/Viewer authorization. Valid invitation links route existing accounts to sign-in and new accounts to registration using the invited email, then return to acceptance after verification.
+
 MVP roles:
 - Owner
 - Editor

@@ -7,7 +7,7 @@ import { authClient } from "@/lib/auth/client";
 import { accountError, loginSchema } from "@/modules/accounts/account.schema";
 import { Arrow } from "@/components/home/home-marks";
 
-export function LoginForm({ emailReady, localEmailPreview = false, returnTo = "/plan" }: { emailReady: boolean; localEmailPreview?: boolean; returnTo?: string }) {
+export function LoginForm({ emailReady, localEmailPreview = false, returnTo = "/plan", initialEmail = "" }: { emailReady: boolean; localEmailPreview?: boolean; returnTo?: string; initialEmail?: string }) {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
   const [pending, setPending] = useState(false);
@@ -73,7 +73,7 @@ export function LoginForm({ emailReady, localEmailPreview = false, returnTo = "/
     {session ? <div className="auth-signed-in"><p>Signed in as <strong>{session.user.email}</strong>.</p><p>Start your wedding story or return to your saved weddings.</p><Link className="button auth-submit" href={returnTo}>{returnTo.startsWith("/family-invite/") ? "Return to invitation" : "Go to your plan"} <Arrow /></Link><Link className="auth-text-button auth-return" href="/weddings">My weddings →</Link><button className="auth-text-button" disabled={pending} onClick={signOut}>{pending ? "Signing out…" : "Sign out"}</button></div> : <form onSubmit={submit} aria-busy={pending}>
       {recovery && <p className="auth-recovery-copy">Enter your account email and we’ll send you a link to reset your password.</p>}
       <fieldset disabled={pending || sessionPending}>
-        <label htmlFor="login-email">Email address</label><input id="login-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required maxLength={254} />
+        <label htmlFor="login-email">Email address</label><input id="login-email" name="email" type="email" defaultValue={initialEmail} readOnly={Boolean(initialEmail)} autoComplete="email" placeholder="you@example.com" required maxLength={254} />
         {!recovery && <><div className="auth-label-row"><label htmlFor="login-password">Password</label><button className="auth-text-button" type="button" onClick={() => { setRecovery(true); setError(""); setNotice(""); }}>Forgot password?</button></div><div className="auth-password"><input id="login-password" name="password" type={visible ? "text" : "password"} autoComplete="current-password" required /><button type="button" aria-controls="login-password" aria-pressed={visible} aria-label={visible ? "Hide password" : "Show password"} onClick={() => setVisible(!visible)}>{visible ? "Hide" : "Show"}</button></div><label className="auth-remember"><input type="checkbox" name="remember" />Keep me signed in on this device</label></>}
         {error && <p className="auth-error" role="alert">{error}</p>}
         {verificationEmail && emailReady && <button type="button" className="auth-text-button" onClick={resendVerification}>Send verification link</button>}

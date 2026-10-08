@@ -8,6 +8,7 @@ const source = (await readFile(new URL("../src/lib/email/delivery.ts", import.me
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText;
 const { isLocalEmailPreview, savePreviewEmail, getPreviewEmails } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 process.env.BETTER_AUTH_URL = "http://localhost:3000";
+delete process.env.EMAIL_DELIVERY_MODE;
 delete process.env.RESEND_API_KEY;
 process.env.NODE_ENV = "production";
 assert.equal(isLocalEmailPreview(), false);
@@ -23,4 +24,9 @@ assert.deepEqual(getPreviewEmails(), []);
 process.env.BETTER_AUTH_URL = "http://localhost:3000";
 process.env.RESEND_API_KEY = "configured";
 assert.equal(isLocalEmailPreview(), false);
-console.log("PASS: production preview/read/write disabled; local development preview works; public URL and configured provider disable preview.");
+process.env.EMAIL_DELIVERY_MODE = "preview";
+assert.equal(isLocalEmailPreview(), true);
+process.env.NODE_ENV = "production";
+assert.equal(isLocalEmailPreview(), false);
+assert.deepEqual(getPreviewEmails(), []);
+console.log("PASS: production preview/read/write disabled; local development preview works; explicit preview overrides configured provider only in development.");

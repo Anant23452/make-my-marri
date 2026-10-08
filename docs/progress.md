@@ -1,6 +1,6 @@
 # Project progress
 
-Last updated: 7 October 2026
+Last updated: 8 October 2026
 
 Milestone progress: `[##----------]` **2 of 12 complete (17%)**.
 This counts equally weighted milestones, not effort or production readiness.
@@ -17,10 +17,12 @@ This counts equally weighted milestones, not effort or production readiness.
 - [ ] Event-specific guests, personalized invitations, and RSVP.
 - [ ] Manual vendor records.
 - [ ] Private media uploads and event setup references.
-- [ ] Dashboard summaries derived from source records.
+- [ ] Dashboard summaries derived from source records. Permission-aware dashboard, saved wedding/countdown, and Owner-only family summaries implemented; events/tasks/finance/RSVP aggregates remain.
 - [ ] Integration/security checks and pilot readiness.
 
 ## Current state and next work
+
+The permission-aware dashboard is implemented: /plan opens it directly for one accessible wedding or offers the wedding selector for multiple memberships. Saved wedding metadata, countdown, and Owner-only family counts are live; future planning sections are labelled Coming soon. Events are the next planned feature.
 
 Wedding onboarding is implemented at /onboarding using the supplied Stitch HTML as reference. Verified accounts can create a wedding and Owner membership transactionally, then reopen saved details at /weddings. The wedding milestone remains incomplete: workspace settings, archive/edit flows, and shared planning modules are not implemented.
 
@@ -150,6 +152,37 @@ The planning starter saves only to local browser storage. It does not create an 
 - Server diagnostics contain only category, provider code, and status; email contents, recipient addresses, raw tokens, and API keys are not logged by the new diagnostics.
 - Existing failed attempts logged an empty provider error; their exact rejection reason cannot be recovered. No invitation email was resent for diagnosis. Sender domain verification remains unconfirmed because the API key is send-only.
 - Validation: TypeScript and git diff --check passed. No live delivery was tested. Progress remains 2 of 12.
+### Local email testing mode — 7 October 2026
+
+- Enabled explicit EMAIL_DELIVERY_MODE=preview in ignored .env.local, preserving Resend credentials. Preview is restricted to development and localhost/127.0.0.1; production never enables the testing inbox.
+- Verification, password reset, and family invitation emails now go to /dev/mailbox for local testing rather than external recipients. Updated inbox action labels to distinguish invitation links.
+- Local inbox returned HTTP 200 and initial TypeScript checks passed. Family send feedback explicitly identifies the local inbox. Real email delivery remains unverified. Progress stays 2 of 12.
+### Real email testing and member privacy — 7 October 2026
+
+- Disabled local inbox mode at the user’s request. Configured Resend test sender onboarding@resend.dev and restricted family test-recipient sends to the user-supplied address; localhost URLs remain the acceptance destination.
+- Revised privacy: only Owner can retrieve the full members API, count, and invitation list. Collaborators’ family page queries only their own membership and shows their role/finance capabilities, not other people’s records. Updated PRD/API policy.
+- One explicitly requested real-email test to the supplied address was rejected by Resend: the API key’s registered account is a different address. No email was sent. Need the matching account key, authorization to use that account’s recipient, or a verified domain before real delivery can succeed.
+- Automatic review initially rejected the integration test due to possible send calls in real-email mode. Removed invitation-create calls; revised tests do not invoke outbound delivery.
+- Validation: initial TypeScript checks passed; lint, git diff --check, and live privacy tests passed: collaborator members API returns 403, their page shows own access without Owner email, and existing invitation authorization checks pass. Fabricated records were removed. Progress remains 2 of 12.
+### Resend account test recipient — 7 October 2026
+
+- Updated the ignored local environment’s allowed real-email test recipient to newbert07@gmail.com at the user’s explicit request, retaining Resend’s test sender and localhost links.
+- Sent one authorized branded localhost delivery-test email. Resend accepted the send request; inbox receipt and link interaction remain user-verifiable. This test does not grant family membership or bypass invitation acceptance.
+- Real invitations can now be attempted to that address. Other recipients still require a verified sending domain. Milestone progress remains 2 of 12 until complete delivery/workflow validation.
+### Invitation account routing and relationship — 7 October 2026
+
+- Valid invitation links select sign-in for an existing recipient account or registration for a new recipient. Auth pages prefill and lock the invited email and preserve the validated return link through registration, verification, and sign-in.
+- Added required relationship selection on first acceptance (groom/bride parents, siblings, relative, friend, or custom Other). Saves relationship on wedding membership in the acceptance transaction and displays it beside the assigned role. Relationship grants no additional capabilities; role/finance rights remain Owner-assigned.
+- New acceptance validates relationship; already-accepted retries preserve the existing profile. Non-Owners still see only their own membership details.
+- Updated database/API contracts. TypeScript and lint passed. Live integration initially stopped because the localhost server was not running; fabricated records were cleaned up. Restarted the local server; live fixture tests passed for required relationship validation and persistence, unchanged Editor/no-finance permission, accepted retries, privacy, revocation, and tenant isolation. No outbound emails were sent; fabricated records were removed. Progress remains 2 of 12.
+### Permission-aware wedding dashboard — 8 October 2026
+
+- Built /weddings/{weddingId}/dashboard using the supplied Stitch HTML: fixed desktop sidebar, editorial hero, responsive cards/mobile navigation, wedding title/date/city, own role/relationship/capabilities, and real Owner-only joined/pending/expired/revoked invitation counts.
+- Added dashboard repository/service and GET /api/v1/weddings/{weddingId}/dashboard. Every read checks active wedding membership and active wedding status; unauthorized/removed/other-wedding users cannot read the dashboard. Non-Owners receive no family-summary field, and unauthorized users receive no financial figures.
+- Upcoming Events, Tasks, event Guests/RSVP, Vendor contacts, Setup references, and authorized Budgets/Expenses are explicitly Coming soon. Removed fabricated readiness percentage, budgets, tasks, activity, SMS reminders, and sample guests from the reference.
+- /plan opens a dashboard directly for exactly one accessible wedding; multiple accessible weddings keep the selector. Invitation acceptance opens its wedding dashboard; saved wedding and family navigation are connected.
+- Validation: calendar tests passed across Kolkata midnight and past/today/future wedding dates. TypeScript, lint, git diff --check, and live Owner/Editor/Viewer role/privacy/login-route tests passed. Fabricated records were removed and no external emails sent. Production build passed, including all dashboard routes. Browser /plan correctly showed sign-in when unauthenticated; authenticated visual review pending.
+- Dashboard milestone remains incomplete because future domain summaries are unbuilt. Progress stays 2 of 12.
 ## Updating this file
 
 

@@ -1,3 +1,4 @@
+import { isLocalEmailPreview } from "@/lib/email/delivery";
 import { headers } from "next/headers";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
@@ -12,5 +13,5 @@ export default async function FamilyPage({ params }: { params: Promise<{ wedding
   const { weddingId } = await params;
   let family;
   try { family = await listFamily(session.user.id, weddingId); } catch (error) { if (error instanceof FamilyError && error.status === 404) notFound(); throw error; }
-  return <div className="auth-page"><header className="auth-header section-width"><Brand /><Link className="auth-back" href="/weddings">← Back to wedding plan</Link></header><main className="family-page section-width"><p className="eyebrow">{family.title} · FAMILY COLLABORATION</p><h1>Your people,<br /><em>together.</em></h1><p className="auth-card-intro">Bring your family into the plan, with the right access for everyone.</p><FamilyPanel weddingId={weddingId} family={family} /></main></div>;
+  return <div className="auth-page"><header className="auth-header section-width"><Brand /><Link className="auth-back" href={`/weddings/${weddingId}/dashboard`}>← Back to dashboard</Link></header><main className="family-page section-width"><p className="eyebrow">{family.title} · FAMILY COLLABORATION</p><h1>Your people,<br /><em>together.</em></h1><p className="auth-card-intro">Bring your family into the plan, with the right access for everyone.</p><FamilyPanel localEmailPreview={isLocalEmailPreview()} weddingId={weddingId} family={family} /></main></div>;
 }

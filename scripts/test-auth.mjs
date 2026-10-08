@@ -11,7 +11,7 @@ const base = process.env.BETTER_AUTH_URL;
 assert.ok(base, "Authentication URL must be configured");
 // Restrict this data-creating smoke test to the local development server.
 assert.ok(["localhost", "127.0.0.1"].includes(new URL(base).hostname));
-assert.ok(!process.env.RESEND_API_KEY, "Run without email delivery to avoid sending test emails");
+assert.ok(process.env.EMAIL_DELIVERY_MODE === "preview" || !process.env.RESEND_API_KEY, "Use local preview mode to avoid sending test emails");
 const email = `auth-test-${randomUUID()}@example.invalid`;
 const password = `Test-${randomUUID()}!`;
 const client = new MongoClient(process.env.MONGODB_URI);
@@ -41,12 +41,17 @@ async function inboxLink(route) {
   const response = await fetch(`${base}/dev/mailbox`);
   const html = await response.text();
   check("Local testing inbox available", response.status === 200);
-  const links = [...html.matchAll(/href="([^"]+)"/g)].map(match => match[1].replaceAll("&amp;", "&"));
+  const article = [...html.matchAll(/<article\b[^>]*>([\s\S]*?)<\/article>/g)].find(match => match[1].includes(`To: <!-- -->${email}`) || match[1].includes(`To: ${email}`));
+  assert.ok(article, "Inbox includes this test account's recipient");
+  const links = [...article[1].matchAll(/href="([^"]+)"/g)].map(match => match[1].replaceAll("&amp;", "&"));
   const link = links.find(value => value.startsWith(`${base}/api/auth/${route}`));
   assert.ok(link, `Inbox contains ${route} link`);
   return link;
 }
 try {
+  console.log(`Temporary test credentials: ${email} / ${password}`);
+  const mailbox = await fetch(`${base}/dev/mailbox`);
+  assert.ok((await mailbox.text()).includes("<h1>Local testing inbox</h1>"), "Live server must have local preview enabled before creating test accounts");
   check("Blank email rejected", !loginSchema.safeParse({ email: "", password, rememberMe: false }).success);
   check("Blank password rejected", !loginSchema.safeParse({ email, password: "", rememberMe: false }).success);
   check("Email whitespace normalized", loginSchema.parse({ email: ` ${email} `, password, rememberMe: false }).email === email);
@@ -61,7 +66,7 @@ try {
     const response = await fetch(`${base}${path}`);
     const html = await response.text();
     check(`${path} renders`, response.status === 200);
-    if (path === "/login") check("Login links to registration and labels both fields", html.includes('href="/register"') && html.includes('id="login-email"') && html.includes('id="login-password"'));
+    if (path === "/login") check("Login links to registration and labels both fields", /href="\/register(?:\?[^\"]*)?"/.test(html) && html.includes('id="login-email"') && html.includes('id="login-password"'));
   }
   let result = await request("/api/auth/get-session");
   check("Anonymous session is empty", result.response.status === 200 && result.data === null);
@@ -110,6 +115,7 @@ try {
   result = await request("/api/auth/reset-password", { token: "invalid-test-token", newPassword: password });
   check("Invalid reset token rejected", result.response.status === 400 && result.data.code === "INVALID_TOKEN");
   result = await request("/api/auth/request-password-reset", { email, redirectTo: "/reset-password" });
+  if (result.response.status !== 200) console.log(`Recovery request failure: status=${result.response.status}, code=${result.data?.code ?? "unknown"}`);
   check("Local password recovery request succeeds", result.response.status === 200);
   result = await request("/api/auth/sign-in/email", { email, password, rememberMe: true });
   const priorCookie = cookies(result.response);
@@ -119,6 +125,7 @@ try {
   const resetToken = new URL(resetRedirect.response.headers.get("location"), base).searchParams.get("token");
   check("Delivered reset link redirects with token", Boolean(resetToken));
   const newPassword = `Reset-${randomUUID()}!`;
+  console.log(`Temporary reset password: ${newPassword}`);
   result = await request("/api/auth/reset-password", { token: resetToken, newPassword });
   check("Valid password reset succeeds", result.response.status === 200);
   check("Password reset revokes existing sessions", (await request("/api/auth/get-session", undefined, priorCookie)).data === null);

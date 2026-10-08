@@ -5,9 +5,9 @@ import { getMongoClient } from "@/lib/db/mongodb";
 import { getAuthEnv } from "@/lib/validation/env";
 import { emailService } from "@/lib/email";
 import { EmailDeliveryError } from "@/lib/email/email.service";
-import { isEmailDeliveryReady } from "@/lib/email/delivery";
+import { isEmailDeliveryReady, isLocalEmailPreview } from "@/lib/email/delivery";
 import { familyDatabase, userDisplay } from "./family.repository";
-import { inviteSchema, memberRoleSchema } from "./family.schema";
+import { inviteSchema, memberRoleSchema, relationshipSchema } from "./family.schema";
 
 export class FamilyError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -28,10 +28,10 @@ export async function familyAccess(userId: string, weddingId: string, ownerOnly 
 
 export async function listFamily(userId: string, weddingId: string) {
   const { db, wedding, membership } = await familyAccess(userId, weddingId);
-  const records = await db.collection("weddingMembers").find({ weddingId: id(weddingId), status: "ACTIVE" }).limit(100).toArray();
+  const records = await db.collection("weddingMembers").find({ weddingId: id(weddingId), status: "ACTIVE", ...(membership.role !== "OWNER" ? { userId } : {}) }).limit(100).toArray();
   const members = await Promise.all(records.map(async member => {
     const user = await userDisplay(member.userId);
-    return { id: member._id.toHexString(), userId: member.userId as string, name: user?.name ?? "Family member", email: user?.email ?? "", role: member.role, financeAccess: member.financeAccess };
+    return { id: member._id.toHexString(), userId: member.userId as string, name: user?.name ?? "Family member", email: user?.email ?? "", role: member.role, financeAccess: member.financeAccess, relationship: member.relationship as string | undefined };
   }));
   const invites = membership.role === "OWNER" ? await db.collection("memberInvites").find({ weddingId: id(weddingId), status: "PENDING" }).sort({ createdAt: -1 }).limit(100).toArray() : [];
   return { title: wedding.title as string, owner: membership.role === "OWNER", members, invites: invites.map(invite => ({ id: invite._id.toHexString(), email: invite.emailNormalized, role: invite.proposedRole, financeAccess: invite.financeAccess, expiresAt: invite.expiresAt.toISOString(), expired: invite.expiresAt <= new Date() })) };
@@ -41,6 +41,7 @@ export async function sendFamilyInvite(userId: string, weddingId: string, input:
   const parsed = inviteSchema.parse(input);
   const { db, wedding } = await familyAccess(userId, weddingId, true);
   if (!isEmailDeliveryReady()) fail(503, "Email delivery needs a verified sender address before invitations can be sent.");
+  if (!isLocalEmailPreview() && process.env.EMAIL_FROM?.includes("@resend.dev") && parsed.email !== process.env.EMAIL_TEST_RECIPIENT?.trim().toLowerCase()) fail(422, "Real-email testing is currently limited to your Resend account email. Verify a sender domain to invite other recipients.");
   const owner = await userDisplay(userId);
   if (String(owner?.email).toLowerCase() === parsed.email) fail(409, "You are already the wedding Owner.");
   const members = await listFamily(userId, weddingId);
@@ -92,10 +93,11 @@ export async function readInvitation(token: string) {
   const wedding = await db.collection("weddings").findOne({ _id: invite.weddingId, status: "ACTIVE" });
   if (!wedding) fail(410, "This wedding is unavailable.");
   const inviter = await userDisplay(invite.invitedByUserId);
-  return { db, invite, title: wedding.title as string, inviter: String(inviter?.name ?? "The wedding Owner") };
+  const recipientHasAccount = Boolean(await db.collection("user").findOne({ email: invite.emailNormalized }, { projection: { _id: 1 } }));
+  return { db, invite, recipientHasAccount, title: wedding.title as string, inviter: String(inviter?.name ?? "The wedding Owner") };
 }
 
-export async function acceptInvitation(token: string, user: { id: string; email: string; emailVerified: boolean }) {
+export async function acceptInvitation(token: string, user: { id: string; email: string; emailVerified: boolean }, input: unknown = {}) {
   if (!user.emailVerified) fail(403, "Verify your email before accepting this invitation.");
   const { db, invite } = await readInvitation(token);
   if (user.email.trim().toLowerCase() !== invite.emailNormalized) fail(403, "Sign in using the email address this invitation was sent to.");
@@ -108,7 +110,8 @@ export async function acceptInvitation(token: string, user: { id: string; email:
       if (!await db.collection("weddings").findOne({ _id: invite.weddingId, status: "ACTIVE" }, { session })) fail(410, "This wedding is unavailable.");
       const member = await db.collection("weddingMembers").findOne({ weddingId: invite.weddingId, userId: user.id }, { session });
       if (current.status === "ACCEPTED") { if (member?.status !== "ACTIVE") fail(410, "Your membership is no longer active."); return; }
-      if (member?.status !== "ACTIVE") await db.collection("weddingMembers").updateOne({ weddingId: invite.weddingId, userId: user.id }, { $set: { role: invite.proposedRole, financeAccess: invite.proposedRole === "EDITOR" && invite.financeAccess, status: "ACTIVE", joinedAt: new Date(), updatedAt: new Date() }, $unset: { removedAt: "" }, $setOnInsert: { createdAt: new Date() } }, { upsert: true, session });
+      const { relationship } = relationshipSchema.parse(input);
+      if (member?.status !== "ACTIVE") await db.collection("weddingMembers").updateOne({ weddingId: invite.weddingId, userId: user.id }, { $set: { relationship, role: invite.proposedRole, financeAccess: invite.proposedRole === "EDITOR" && invite.financeAccess, status: "ACTIVE", joinedAt: new Date(), updatedAt: new Date() }, $unset: { removedAt: "" }, $setOnInsert: { createdAt: new Date() } }, { upsert: true, session });
       await db.collection("memberInvites").updateOne({ _id: invite._id, status: "PENDING" }, { $set: { status: "ACCEPTED", acceptedByUserId: user.id, acceptedAt: new Date(), updatedAt: new Date() } }, { session });
     });
   } finally { await session.endSession(); }

@@ -104,6 +104,7 @@ A field labeled **R** is required; **O** is optional. Every application collecti
 | `financeAccess` | Boolean | R; true for Owner, configurable for Editor, false for Viewer |
 | `status` | Enum | R; `ACTIVE`, `REMOVED` |
 | `joinedAt` | Date | R |
+| `relationship` | String | O for existing memberships/Owner; required on new family acceptance, trimmed 2–80 characters; describes relation to the couple and grants no permissions |
 | `removedAt` | Date | O |
 | `createdAt`, `updatedAt` | Date | R |
 

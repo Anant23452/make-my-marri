@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { MongoClient } from "mongodb";
 
-const base = "http://localhost:3000";
-assert.ok(!process.env.RESEND_API_KEY, "Run without external email delivery to avoid sending test emails");
+const base = process.env.BETTER_AUTH_URL || "http://localhost:3000";
+assert.ok(process.env.EMAIL_DELIVERY_MODE === "preview" || !process.env.RESEND_API_KEY, "Use preview mode to avoid sending external test emails");
 const client = new MongoClient(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
 const accounts = [];
 await client.connect();
@@ -54,7 +54,7 @@ try {
   for (const path of ["/plan", "/onboarding"]) {
     const returningUser = await fetch(base + path, { headers: { Cookie: owner.cookie }, redirect: "manual" });
     assert.equal(returningUser.status, 307);
-    assert.equal(returningUser.headers.get("location"), "/weddings");
+    assert.equal(returningUser.headers.get("location"), path === "/plan" ? `/weddings/${created.payload.data.id}/dashboard` : "/weddings");
   }
   console.log("PASS: new users reach onboarding; returning owners reach saved plans.");
   const wedding = await db.collection("weddings").findOne({ ownerUserId: owner.user._id.toString() });

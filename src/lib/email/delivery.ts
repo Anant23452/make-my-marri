@@ -1,7 +1,8 @@
 import "server-only";
 
 export function isLocalEmailPreview() {
-  if (process.env.NODE_ENV !== "development" || process.env.RESEND_API_KEY) return false;
+  if (process.env.NODE_ENV !== "development") return false;
+  if (process.env.EMAIL_DELIVERY_MODE !== "preview" && process.env.RESEND_API_KEY) return false;
   try {
     const url = new URL(process.env.BETTER_AUTH_URL ?? "");
     return url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname);

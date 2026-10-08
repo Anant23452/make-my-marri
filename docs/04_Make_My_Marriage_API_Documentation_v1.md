@@ -293,7 +293,7 @@ Rules:
 
 | Method | Endpoint | Permission | Purpose |
 |---|---|---|---|
-| GET | `/weddings/{weddingId}/members` | Member | List active members |
+| GET | `/weddings/{weddingId}/members` | Owner | List active members; collaborators receive 403 |
 | POST | `/weddings/{weddingId}/member-invites` | Owner | Invite family member |
 | GET | `/weddings/{weddingId}/member-invites` | Owner | List pending/history |
 | POST | `/weddings/{weddingId}/member-invites/{inviteId}/revoke` | Owner | Revoke pending invite |
@@ -483,6 +483,8 @@ Owner only. Sets `status=ARCHIVED`; does not cascade-delete planning history.
 
 ## 10.6 Dashboard
 
+Current implementation (8 October 2026): wedding metadata, wedding-local countdown, caller role/relationship/capabilities, and Owner-only family invitation counts are live. `family` is omitted entirely for non-Owners. Unbuilt events/tasks/guest summaries return `status: COMING_SOON` rather than fabricated totals. Finance returns permission-derived `visible` and `status: COMING_SOON` without amounts. The expanded response below remains the future full-dashboard contract.
+
 ```http
 GET /api/v1/weddings/{weddingId}/dashboard
 ```
@@ -614,6 +616,8 @@ POST /api/v1/member-invites/{token}/accept
 ```
 
 Requires a logged-in, verified account whose normalized email matches the invite.
+
+New acceptance requires JSON `{ "relationship": "Groom’s father" }` (trimmed, 2–80 characters). This is membership profile information only; role and finance access always come from the Owner’s invitation. Already-accepted retries may use an empty body and do not change the saved relationship.
 
 ### Response `200`
 

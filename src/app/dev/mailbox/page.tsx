@@ -23,7 +23,7 @@ export default async function LocalMailboxPage() {
       try { if (candidate && new URL(candidate).origin === base.origin) href = candidate; } catch {}
       return <article key={`${email.createdAt}-${index}`} style={{ borderTop: "1px solid var(--line)", paddingBlock: 20 }}>
         <h2 style={{ fontSize: 25 }}>{email.subject}</h2><p style={{ overflowWrap: "anywhere" }}>To: {email.to}</p>
-        {href && <a className="button auth-submit" href={href}>{email.subject.startsWith("Verify") ? "Verify email" : "Reset password"}</a>}
+        {href && <a className="button auth-submit" href={href}>{email.subject.startsWith("Verify") ? "Verify email" : email.subject.startsWith("Reset") ? "Reset password" : "Open invitation"}</a>}
       </article>;
     })}
     <Link className="auth-text-button" href="/login">Back to sign in</Link>

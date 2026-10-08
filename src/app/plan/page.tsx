@@ -10,6 +10,7 @@ export default async function PlanPage() {
   const session = await (await getAuth()).api.getSession({ headers: await headers() });
   if (!session || !session.user.emailVerified) redirect("/login");
   const weddings = await weddingService.list(session.user.id);
+  if (weddings.length === 1) redirect(`/weddings/${weddings[0].id}/dashboard`);
   if (weddings.length || await ownsWedding(session.user.id)) redirect("/weddings");
   redirect("/onboarding");
 }
